@@ -7,33 +7,18 @@
     <link rel="stylesheet" href="style.css?v=mobile-header-2">
     <link rel="icon" href="image/kita.png" type="image/png">
     <style>
-        .duiyuan-liebiao {
-            margin-top: 20px;
-            border-top: 1px solid #eee;
-        }
-        .duiyuan-liebiao .dantiao-xinwen {
-            margin-bottom: 0;
-            padding-top: 18px;
-        }
-        .duiyuan-liebiao h3 {
-            margin-bottom: 8px;
-        }
+        .duiyuan-liebiao { margin-top: 20px; border-top: 1px solid #eee; }
+        .duiyuan-liebiao .dantiao-xinwen { margin-bottom: 0; padding-top: 18px; }
+        .duiyuan-toubu { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+        .duiyuan-toubu h3 { margin: 0; }
+        .duiyuan-touxiang { width: 64px; height: 64px; border-radius: 50%; border: 3px solid currentColor; object-fit: cover; object-position: center 12%; background-color: #fff; flex: 0 0 auto; }
         .duiyuan-liebiao .duiyuan-bocchi { color: #d96aa0; }
         .duiyuan-liebiao .duiyuan-kita { color: #d83a2e; }
         .duiyuan-liebiao .duiyuan-ryo { color: #2f6fc7; }
         .duiyuan-liebiao .duiyuan-nijika { color: #d69a00; }
-        .duiyuan-liebiao .yueqi-biaoqian {
-            display: inline-block;
-            margin-bottom: 8px;
-            padding: 4px 8px;
-            background-color: #f6eeee;
-            color: #7a0000;
-            font-size: 13px;
-            font-weight: bold;
-        }
-        .duiyuan-liebiao p {
-            margin-bottom: 8px;
-        }
+        .duiyuan-liebiao .yueqi-biaoqian { display: inline-block; margin-bottom: 8px; padding: 4px 8px; background-color: #f6eeee; color: #7a0000; font-size: 13px; font-weight: bold; }
+        .duiyuan-liebiao p { margin-bottom: 8px; }
+        @media (max-width: 600px) { .duiyuan-touxiang { width: 52px; height: 52px; } }
     </style>
 </head>
 <body>
@@ -68,25 +53,25 @@
 
         <div class="duiyuan-liebiao">
             <div class="dantiao-xinwen">
-                <h3 class="duiyuan-bocchi">后藤独</h3>
+                <div class="duiyuan-toubu duiyuan-bocchi"><img class="duiyuan-touxiang" src="https://bocchi.rocks/omnibus/assets/img/page/character/hitori/image_movienew.png" alt="后藤独头像"><h3>后藤独</h3></div>
                 <div class="yueqi-biaoqian">担当：主音吉他 / 乐器：电吉他</div>
                 <p>后藤独是结束乐队的核心吉他手，也是网络上“吉他英雄”的本人。平时极度怕生、容易进入阴暗角落，但一拿起电吉他就会把大量情绪藏进细密的演奏里。</p>
                 <p>她的吉他部分负责乐队的锋利度和爆发力，独奏时常常像把没说出口的话一次性推到台前。舞台外看起来很脆弱，舞台上却是支撑歌曲重量的人。</p>
             </div>
             <div class="dantiao-xinwen">
-                <h3 class="duiyuan-kita">喜多郁代</h3>
+                <div class="duiyuan-toubu duiyuan-kita"><img class="duiyuan-touxiang" src="https://bocchi.rocks/omnibus/assets/img/page/character/ikuyo/image_movienew.png" alt="喜多郁代头像"><h3>喜多郁代</h3></div>
                 <div class="yueqi-biaoqian">担当：主唱兼节奏吉他 / 乐器：电吉他</div>
                 <p>喜多郁代是乐队的主唱，也是现场最显眼的阳光来源。她擅长把观众的注意力拉回舞台，用明亮的声线和稳定的节奏吉他把歌曲推向前方。</p>
                 <p>早期她的吉他技术还在追赶队友，但成长速度很快。她的存在让结束乐队不只是一支会演奏的乐队，也像一束能照亮下北泽地下室的红色信号灯。</p>
             </div>
             <div class="dantiao-xinwen">
-                <h3 class="duiyuan-ryo">山田凉</h3>
+                <div class="duiyuan-toubu duiyuan-ryo"><img class="duiyuan-touxiang" src="https://bocchi.rocks/omnibus/assets/img/page/character/ryo/image_movienew.png" alt="山田凉头像"><h3>山田凉</h3></div>
                 <div class="yueqi-biaoqian">担当：贝斯 / 乐器：电贝斯</div>
                 <p>山田凉是乐队的贝斯手，沉默、自由、音乐品味强烈，并长期处于稳定缺钱状态。她的贝斯线不只是跟随节奏，而是经常在歌曲底部绕出冷静又有个性的走向。</p>
                 <p>她不太爱解释自己，但会用音色和编曲表达判断。结束乐队许多“有点酷”的瞬间，都来自凉把贝斯从背景拉到前景的那一下。</p>
             </div>
             <div class="dantiao-xinwen">
-                <h3 class="duiyuan-nijika">伊地知虹夏</h3>
+                <div class="duiyuan-toubu duiyuan-nijika"><img class="duiyuan-touxiang" src="https://bocchi.rocks/omnibus/assets/img/page/character/nijika/image_movienew.png" alt="伊地知虹夏头像"><h3>伊地知虹夏</h3></div>
                 <div class="yueqi-biaoqian">担当：鼓手 / 乐器：架子鼓</div>
                 <p>伊地知虹夏是乐队的鼓手，也是把大家真正聚在一起的人。她负责节奏、排练、沟通和现场秩序，是结束乐队最可靠的组织者。</p>
                 <p>她的鼓点不抢戏，却能稳稳托住吉他、贝斯和人声。对一支经常被情绪和突发状况牵着跑的乐队来说，虹夏的存在就是节拍器，也是方向盘。</p>
