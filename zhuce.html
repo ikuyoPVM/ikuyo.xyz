@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>新用户注册 - IKUYO News</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="image/kita.png" type="image/png">
+    
+    <style>
+        .zhuce-mianban {
+            width: 450px;
+            margin: 50px auto;
+            padding: 30px;
+            background-color: #fff;
+            border-top: 5px solid #B80000;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .zhuce-mianban h2 {
+            margin-bottom: 20px;
+            text-align: center;
+            color: #333;
+        }
+
+        /* 协议小字 */
+        .xieyi-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 15px;
+            text-align: center;
+            line-height: 1.6;
+        }
+        
+        .kita-logo {
+            font-size: 24px;
+            font-weight: bold;
+            margin-right: 20px;
+            letter-spacing: -1px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5); /* 发光特效 */
+        }
+        /* 覆盖原来的 logo 样式 */
+        .logo { display: none; } 
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="toubu-neirong">
+            <div class="kita-logo">IKUYO NEWS</div>
+            
+            <nav>
+                <a href="index.html">主页</a>
+                <a href="https://bocchi.rocks/kessokuband/">结束乐队</a>
+                <a href="https://www.bilibili.com/video/BV1zoF5ecE4v/">音乐作品</a>
+                <a href="#">下北泽时尚</a>
+                <a href="https://mzh.moegirl.org.cn/%E7%BB%93%E6%9D%9F%E4%B9%90%E9%98%9F">关于</a>
+            </nav>
+
+            
+        </div>
+    </header>
+
+    <div class="zhuce-mianban">
+        <h2>注册新账号</h2>
+        
+        <form action="denglu.html">
+            
+            <div class="form-group">
+                <label>用户名</label>
+                <input type="text" class="form-input" placeholder="请设置用户名" required>
+            </div>
+
+            <div class="form-group">
+                <label>注册区域</label>
+                <select class="form-input" name="region">
+                    <option value="cn">中国大陆 (China)</option>
+                    <option value="hk">中国香港 (Hong Kong)</option>
+                    <option value="uk">英国 (United Kingdom)</option>
+                    <option value="us">美国 (United States)</option>
+                    <option value="other">其他地区 (Other)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>电子邮箱</label>
+                <input type="email" class="form-input" placeholder="example@email.com" required>
+            </div>
+
+            <div class="form-group">
+                <label>设置密码</label>
+                <input type="password" class="form-input" placeholder="6-16位密码" required>
+            </div>
+
+            <div class="form-group">
+                <label>确认密码</label>
+                <input type="password" class="form-input" placeholder="请再次输入密码" required>
+            </div>
+
+            <button type="submit" class="hongse-anniu" style="width: 100%; margin-top: 10px;">立即注册</button>
+            
+            <div class="xieyi-text">
+                点击“立即注册”即表示您同意并愿意遵守<br>
+                <a href="#" style="color: #666;">用户协议</a> 和 <a href="#" style="color: #666;">隐私政策</a>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
+                <span style="font-size: 14px; color: #666;">已有账号？</span>
+                <a href="denglu.html" style="color: #B80000; text-decoration: none; font-weight: bold;">直接登录</a>
+            </div>
+
+        </form>
+    </div>
+
+    <footer>
+         <p class="footer">Copyright © 2025 IKUYO NEWS | 结束乐队后援会制作</p>
+    </footer>
+
+</body>
+</html>
