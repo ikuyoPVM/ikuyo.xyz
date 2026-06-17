@@ -72,18 +72,18 @@ nav a:last-child {
 }
 
 .huiyuan-rukou {
-    color: #B80000;
+    color: #B80000 !important;
     background-color: #fff;
     border: 1px solid rgba(255, 255, 255, 0.85);
     padding: 7px 12px;
     font-size: 13px;
     font-weight: bold;
-    text-decoration: none;
+    text-decoration: none !important;
     white-space: nowrap;
 }
 
 .huiyuan-rukou:hover {
-    color: #fff;
+    color: #fff !important;
     background-color: #333;
     border-color: #333;
 }
@@ -95,8 +95,8 @@ nav a:last-child {
 }
 
 .yuyan-qiehuan a {
-    color: white;
-    text-decoration: none;
+    color: white !important;
+    text-decoration: none !important;
     font-size: 12px;
     line-height: 28px;
     padding: 0 7px;
@@ -314,10 +314,6 @@ h2 a:hover, h3 a:hover {
         padding-top: 8px;
         padding-bottom: 8px;
     }
-
-    .touyou-gongneng {
-        margin-left: 0;
-    }
 }
 
 @media (max-width: 760px) {
@@ -326,20 +322,41 @@ h2 a:hover, h3 a:hover {
     }
 
     .toubu-neirong {
-        padding: 10px 12px 0;
-        align-items: flex-start;
-        flex-direction: column;
+        padding: 8px 10px 0;
+        align-items: center;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0;
     }
 
     .kita-logo,
     .logo {
-        margin-right: 0;
-        margin-bottom: 8px;
-        font-size: 22px;
+        order: 1;
+        margin-right: 8px;
+        margin-bottom: 0;
+        font-size: 20px;
+        line-height: 34px;
+    }
+
+    .touyou-gongneng {
+        order: 2;
+        margin-left: auto;
+        display: contents;
+    }
+
+    .huiyuan-rukou {
+        order: 2;
+        margin-left: auto;
+        padding: 5px 9px;
+        font-size: 12px;
+        line-height: 20px;
+        border-radius: 2px;
     }
 
     nav {
+        order: 3;
         width: 100%;
+        margin-top: 8px;
         overflow-x: auto;
         flex-wrap: nowrap;
         -webkit-overflow-scrolling: touch;
@@ -348,26 +365,27 @@ h2 a:hover, h3 a:hover {
 
     nav a {
         flex: 0 0 auto;
-        padding: 0 12px;
-        min-height: 44px;
-        line-height: 44px;
+        padding: 0 11px;
+        min-height: 40px;
+        line-height: 40px;
         border-left: 0;
         border-right: 1px solid #a30000;
     }
 
-    .touyou-gongneng {
-        order: -1;
-        align-self: flex-end;
-        margin-bottom: 8px;
-    }
-
-    .huiyuan-rukou {
-        padding: 6px 10px;
+    .yuyan-qiehuan {
+        order: 4;
+        width: 100%;
+        margin-top: 6px;
+        justify-content: flex-end;
+        border: 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.14);
     }
 
     .yuyan-qiehuan a {
-        line-height: 26px;
-        padding: 0 6px;
+        line-height: 30px;
+        padding: 0 8px;
+        border-left: 0;
+        font-size: 12px;
     }
 
     .zhuti-hezi {
@@ -473,7 +491,7 @@ h2 a:hover, h3 a:hover {
 
     .kita-logo,
     .logo {
-        font-size: 20px;
+        font-size: 19px;
     }
 
     nav a {
@@ -481,9 +499,9 @@ h2 a:hover, h3 a:hover {
         padding: 0 10px;
     }
 
-    .touyou-gongneng {
-        width: 100%;
-        justify-content: space-between;
+    .huiyuan-rukou {
+        font-size: 12px;
+        padding: 4px 8px;
     }
 
     h1 {
