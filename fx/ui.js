@@ -609,6 +609,14 @@
      服务器上有个常驻中继每分钟抓一次真实汇率（不管有没有人来玩），
      写成 fx/live.js。这里用 <script> 拉它，天然跨域，Pages 版也能读服务器那份。 */
   var live = { ok: false, ts: 0, src: '', quoteTs: 0, legs: 0, pairs: 0, days: 0, apiSource: '' };
+
+  /* 报价「多久以前」的人话写法：45秒 / 12分钟 / 3小时20分 */
+  function fmtAge(min) {
+    if (min < 1) return Math.max(1, Math.round(min * 60)) + ' 秒';
+    if (min < 60) return Math.round(min) + ' 分钟';
+    var h = Math.floor(min / 60), m = Math.round(min % 60);
+    return h + ' 小时' + (m ? ' ' + m + ' 分' : '');
+  }
   var LIVE_URL = /(^|\.)github\.io$/i.test(location.hostname)
     ? 'https://ikuyo.xyz/fx/live.js'
     : 'live.js';
@@ -630,12 +638,15 @@
         '再往后走的价格是模型生成的（回到 1× 就重新对齐）\n源：' + live.src;
     } else if (live.ok && ageMin < 3) {
       cls = 'ok'; txt = '● 实时 ' + liveClock(live.ts);
-      tip = '真实盘中报价，服务器每 60 秒同步一次（没有人玩的时候也在同步）\n源：' + live.src +
+      tip = '真实盘中报价，服务器每 2 分钟同步一次（没有人玩的时候也在同步）\n源：' + live.src +
         '\n覆盖 ' + (live.days || 1) + ' 天真实 tick：' + live.legs + ' 条 EUR 基准腿 → ' + live.pairs + ' 个品种' +
-        '\n最近一条报价：' + new Date(live.quoteTs || live.ts).toISOString().slice(11, 19) + ' UTC';
-    } else if (live.ok && ageMin < 30) {
-      cls = 'warn'; txt = '● 实时 · ' + Math.round(ageMin) + ' 分钟前';
-      tip = '最后一条真实报价已经过了 ' + Math.round(ageMin) + ' 分钟（可能休市或中继在重连）\n源：' + live.src;
+        '\n最近一条报价：' + liveClock(live.quoteTs || live.ts);
+    } else if (live.ok && ageMin < 720) {
+      // 中继受限（上游限流 / 网络抖动）：真实 tick 还在，只是不再刷新，别急着说「离线」
+      cls = 'warn'; txt = '● 报价 ' + fmtAge(ageMin) + '前';
+      tip = '最后一条真实报价在 ' + fmtAge(ageMin) + '前，中继这阵子没拿到新数据（多半是上游免费额度限流）' +
+        '\n图上已经走过的真实 tick 仍然有效，之后的行情按模型走，告警恢复后自动续上' +
+        '\n源：' + live.src;
     } else {
       cls = 'off'; txt = '○ 离线（内置数据）';
       tip = '没拿到实时报价：' + (live.apiSource || 'live.js 不可达') + '\n行情按内置 ECB 日线 + 模型走';
@@ -664,6 +675,12 @@
       return false;
     }
     var gap = eng.clock - live.quoteTs;
+    // 中继断了（报价超过半小时）就别按旧 tick 拖时钟回去，只在 1× 下按模型继续走
+    var ageMin = live.ts ? (Date.now() - live.ts) / 60000 : 0;
+    if (ageMin > 30) {
+      if (!quiet) toast('实时报价停在 ' + fmtAge(ageMin) + '前，先按 1× 走模型，中继恢复后自动对齐');
+      return false;
+    }
     if (Math.abs(gap) < 30000) {
       if (!quiet) toast('已经在实时上了（' + liveClock(live.quoteTs) + '）');
       return false;
@@ -702,7 +719,7 @@
   function applyLive(L) {
     if (!L || !(L.days || L.tape)) return false;
     // 太旧的 live.js 不用（比如本地留的旧快照），免得把几小时前的价格当成「现在」
-    if (L.ts && (Date.now() / 1000 - L.ts) > 6 * 3600) {
+    if (L.ts && (Date.now() / 1000 - L.ts) > 3 * 3600) {
       live.ok = false; live.ts = (L.ts || 0) * 1000;
       live.apiSource = 'live.js 已过期 ' + Math.round((Date.now() / 1000 - L.ts) / 3600) + ' 小时';
       return false;
