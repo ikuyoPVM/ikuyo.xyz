@@ -237,12 +237,14 @@
     var dstart = this._dayStartForIdx(idx);
     var dow = new Date(dstart).getUTCDay();
     var c;
-    if (dow === 6 || dow === 0) {
-      c = prev;                            // 周末外汇市场不动
+    if (dow === 6) {
+      c = prev;                            // 周六外汇市场完全不动
     } else {
+      // 周日 UTC 21:00 开盘，只剩三个小时，波动按比例缩小到 0.35 倍
+      var scale = dow === 0 ? 0.35 : 0.92;
       var rng = new RNG(this._seedFor(name, 900000 + idx));
       var drift = 0.000015 * (rng.next() - 0.5);  // 极小的随机漂移
-      c = prev * Math.exp(def.sigma * rng.gauss() * 0.92 + drift);
+      c = prev * Math.exp(def.sigma * rng.gauss() * scale + drift);
     }
     this._extCache[key] = c;
     return c;
@@ -268,7 +270,7 @@
     var path = new Float64Array(M + 1);
     var dstart = this._dayStartForIdx(idx);
     var dow = new Date(dstart).getUTCDay();
-    var weekend = (dow === 6 || dow === 0);
+    var weekend = (dow === 6);
     if (weekend || !(y0 > 0) || !(y1 > 0)) {
       var flat = weekend ? y0 : y1;
       for (var f = 0; f <= M; f++) path[f] = flat;
@@ -292,6 +294,17 @@
       path[j] = Math.exp(l0 + (l1 - l0) * (j / M) + bridge);
     }
     path[0] = y0; path[M] = y1;
+    // 周日只在 UTC 21:00 之后交易：开盘前价格不动，开盘后走一小段
+    if (dow === 0) {
+      var open0 = 21 * 60;
+      var base = path[open0], span = y1 - base, raw = path[M] - base;
+      for (var s = 0; s < open0; s++) path[s] = y0;
+      for (var s2 = open0; s2 <= M; s2++) {
+        var k2 = raw !== 0 ? (path[s2] - base) / raw : 0;
+        path[s2] = base + span * k2;
+      }
+      path[open0] = y0; path[M] = y1;
+    }
     path = this._applyLive(name, idx, path, dstart);
     st.path = path; st.pathIdx = idx;
     return path;
@@ -591,7 +604,7 @@
       var dFrom = Math.max(1, startIdx - 180);
       for (var di = dFrom; di <= startIdx - 1; di++) {
         var dowD = new Date(self._dayStartForIdx(di)).getUTCDay();
-        if (dowD === 6 || dowD === 0) continue;     // 周末没有日线，别画成「平线」
+        if (dowD === 6) continue;     // 周六没有日线（周日 21:00 开盘，占一小段有日线）
         var o = self._closeAt(name, di - 1), c = self._closeAt(name, di);
         var wy = Math.abs(new RNG(self._seedFor(name, 700000 + di)).gauss()) * 0.55 + 0.2;
         var hi = Math.max(o, c) * (1 + st.def.sigma * wy * 0.45);
