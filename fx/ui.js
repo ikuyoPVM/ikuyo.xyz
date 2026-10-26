@@ -606,7 +606,7 @@
   /* ------------------------------------------------------- 实时数据（live.js）
      服务器上有个常驻中继每分钟抓一次真实汇率（不管有没有人来玩），
      写成 fx/live.js。这里用 <script> 拉它，天然跨域，Pages 版也能读服务器那份。 */
-  var live = { ok: false, ts: 0, src: '', quoteTs: 0, legs: 0, days: 0, apiSource: '' };
+  var live = { ok: false, ts: 0, src: '', quoteTs: 0, legs: 0, pairs: 0, days: 0, apiSource: '' };
   var LIVE_URL = /(^|\.)github\.io$/i.test(location.hostname)
     ? 'https://ikuyo.xyz/fx/live.js'
     : 'live.js';
@@ -629,7 +629,7 @@
     } else if (live.ok && ageMin < 3) {
       cls = 'ok'; txt = '● 实时 ' + liveClock(live.ts);
       tip = '真实盘中报价，服务器每 60 秒同步一次（没有人玩的时候也在同步）\n源：' + live.src +
-        '\n覆盖 ' + (live.days || 1) + ' 天 / ' + live.legs + ' 条腿 / 13 个品种' +
+        '\n覆盖 ' + (live.days || 1) + ' 天真实 tick：' + live.legs + ' 条 EUR 基准腿 → ' + live.pairs + ' 个品种' +
         '\n最近一条报价：' + new Date(live.quoteTs || live.ts).toISOString().slice(11, 19) + ' UTC';
     } else if (live.ok && ageMin < 30) {
       cls = 'warn'; txt = '● 实时 · ' + Math.round(ageMin) + ' 分钟前';
@@ -657,7 +657,8 @@
     live.ts = (L.ts || 0) * 1000;
     live.quoteTs = (L.quoteTs || L.ts || 0) * 1000;
     live.src = L.src || 'live.js';
-    live.legs = legs;
+    live.legs = L.legs ? Object.keys(L.legs).length : 0;
+    live.pairs = legs;
     live.days = L.days ? L.days.length : 1;
     live.apiSource = '';
     return true;
