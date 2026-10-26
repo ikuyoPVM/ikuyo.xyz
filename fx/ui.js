@@ -372,8 +372,8 @@
   }
 
   /* ------------------------------------------------------------ 头部信息 */
-  var SRV_OFF = 3 * 3600000;
-  function srvDate(ms) { return new Date(ms + SRV_OFF); }          // 服务器时间 UTC+3
+  var SRV_OFF = 8 * 3600000;
+  function srvDate(ms) { return new Date(ms + SRV_OFF); }          // 服务器时间 UTC+8（北京）
   function p2(n) { return ('0' + n).slice(-2); }
 
   function renderHeader() {
@@ -585,7 +585,7 @@
   function renderStatus() {
     var open = eng.marketOpen(eng.clock);
     var s = eng.sym[state.sym];
-    $('statusTime').textContent = FX.isoUTC(eng.clock) + ' (UTC+3)';
+    $('statusTime').textContent = FX.isoUTC(eng.clock) + ' (UTC+8)';
     $('statusSpread').textContent = s.spreadPips.toFixed(1) + ' 点';
     $('statusSlip').textContent = eng.diag.slipPips ? eng.diag.slipPips.toFixed(2) + ' 点' : '0';
     $('connDot').className = 'dot' + (open ? '' : ' off');
@@ -600,7 +600,7 @@
       src = (isReal ? 'ECB 真实收盘 · 锚定至 ' + prettyDate(world.dates[world.n - 1]) : '模拟日（真实数据已走完）');
     }
     $('statusSrc').innerHTML = src + ' · ' + (open ? '市场开盘中' : '休市');
-    $('statusLeft').textContent = eng.positions.length + ' 持仓 · ' + eng.orders.length + ' 挂单 · ' + (state.speed ? state.speed + '×' : '暂停');
+    $('statusLeft').textContent = eng.positions.length + ' 持仓 · ' + eng.orders.length + ' 挂单 · ' + (state.speed ? (state.speed === 1 ? '实时' : state.speed + '×') : '暂停');
     $('closedNotice').hidden = open;
     renderLiveChip();
   }
@@ -643,7 +643,6 @@
     el.className = 'livechip ' + cls;
     el.textContent = txt;
     el.title = tip;
-    renderSyncBtn(ahead);
   }
 
   /* --------------------------------------------- 同步时钟（拨回实时）
@@ -654,14 +653,6 @@
     if (m < 60) return m + ' 分钟';
     var h = Math.floor(m / 60), mm = m % 60;
     return h + ' 小时' + (mm ? ' ' + mm + ' 分' : '');
-  }
-
-  /* 顶栏里用的紧凑写法：47m / 3h20 */
-  function fmtShort(ms) {
-    var m = Math.round(Math.abs(ms) / 60000);
-    if (m < 60) return m + 'm';
-    var h = Math.floor(m / 60), mm = m % 60;
-    return h + 'h' + (mm ? p2(mm) : '');
   }
 
   function syncClock(opts) {
@@ -708,33 +699,6 @@
     }
   }
 
-  function renderSyncBtn(aheadMin) {
-    var b = $('btnSync');
-    if (!b) return;
-    var on = state.speed === 1;
-    var drift = (live.ok && live.ts) ? (eng.clock - live.ts) : 0;
-    var back = (live.ok && live.quoteTs) ? (eng.clock - live.quoteTs) : 0;
-    // 按钮常驻，文案统一叫「实时」：绿色=正在实时，琥珀=偏离了，点一下回来
-    b.hidden = false;
-    b.className = 'syncchip' + (on && Math.abs(drift) < 150000 ? ' on' : '');
-    b.textContent = '⏱ 实时';
-    var lines = [];
-    if (!live.ok) {
-      lines.push('当前没有实时报价（离线），点一下只切到 1×');
-    } else if (on && Math.abs(drift) < 150000) {
-      lines.push('正在实时：模拟时钟贴着服务器最新报价 ' + liveClock(live.quoteTs) + '，自动同步已开');
-      lines.push('偏离超过 1.5 分钟会自动拉回来；倍速跑飞后点这里手动归位（快捷键 T）');
-    } else if (back > 0) {
-      lines.push('模拟时钟比真实时间快 ' + fmtSpan(back) + '，这段价格是模型生成的');
-      lines.push('点一下：切到 1× 并把时钟按回 ' + liveClock(live.quoteTs) + '（快捷键 T）');
-    } else {
-      lines.push('模拟时钟比真实时间慢 ' + fmtSpan(back) + '（可能刚暂停过）');
-      lines.push('点一下：切到 1× 并对齐到 ' + liveClock(live.quoteTs) + '（快捷键 T）');
-    }
-    lines.push('路径 / K 线 / 净值曲线一起重算，持仓和挂单不动');
-    b.title = lines.join('\n');
-  }
-
   function applyLive(L) {
     if (!L || !(L.days || L.tape)) return false;
     // 太旧的 live.js 不用（比如本地留的旧快照），免得把几小时前的价格当成「现在」
@@ -759,9 +723,17 @@
   var liveTimer = null;
   function setSpeed(v) {
     state.speed = v;
-    document.querySelectorAll('#speeds button').forEach(function (b) { b.classList.toggle('on', +b.dataset.sp === v); });
+    document.querySelectorAll('#speeds button').forEach(function (b) {
+      var on = +b.dataset.sp === v;
+      b.classList.toggle('on', on);
+      if (+b.dataset.sp === 1) b.textContent = '实时';
+    });
     var sl = $('statusLeft');
-    if (sl) sl.textContent = v ? '行情 ' + v + '×' : '已暂停';
+    if (sl) {
+      sl.textContent = eng.positions.length + ' 持仓 · ' + eng.orders.length + ' 挂单 · ' +
+        (v ? (v === 1 ? '实时' : v + '×') : '暂停');
+    }
+    renderLiveChip();
   }
 
   function loadLive() {
@@ -886,13 +858,11 @@
       if (!b) return;
       var v = +b.dataset.sp;
       setSpeed(v);
-      if (v === 1) syncClock({ quiet: true });     // 点 1× 就直接拉回实时
+      if (v === 1) syncClock();     // 点「实时」= 贴回服务器最新报价
     });
 
     var chip = $('liveChip');
     if (chip) chip.addEventListener('click', function () { loadLive(); });
-    var sync = $('btnSync');
-    if (sync) sync.addEventListener('click', function () { syncClock(); });
 
     $('levSeg').addEventListener('click', function (e) {
       var b = e.target.closest('button[data-lev]');
@@ -1095,7 +1065,7 @@
       '<tr><td>保证金</td><td>名义价值 ÷ 杠杆，杠杆 1:10 ~ 1:500，且受品种上限约束（USDCNY 只到 1:100）</td></tr>',
       '<tr><td>隔夜利息</td><td>按两种货币的政策利率差算：<code>名义价值 × ((r基础 − r报价) × 方向 − 0.25%) ÷ 365</code>，每天服务器 00:00 结算，<b>周三三倍</b></td></tr>',
       '<tr><td>追保／强平</td><td>保证金比例 &lt; 100% 提示追保；&lt; <b>50%</b> 强平浮亏最大的那一笔（按市价 + 2.2 倍滑点），直到比例回到 50% 以上</td></tr>',
-      '<tr><td>休市</td><td>周六全天、周日 UTC 21:00 前、周五 UTC 21:00 后不撮合；休市期间价格冻结、挂单不成交</td></tr>',
+      '<tr><td>休市</td><td>周五 21:00 UTC（北京周六 05:00）到周日 21:00 UTC（北京周一 05:00）之间不撮合；休市期间价格冻结、挂单不成交</td></tr>',
       '<tr><td>止损/止盈</td><td>距离必须大于「点差 + 2 点」，否则报 Invalid stops；止损按市价成交（会滑点），止盈按限价成交（不会更差）</td></tr>',
       '</table>',
 
@@ -1114,9 +1084,9 @@
       '<li>左边挑品种，中间选周期（M1 ~ D1），滚轮缩放、拖动平移、双击复位。</li>',
       '<li>右边填手数和杠杆，可以直接市价做多做空，也可以挂限价/止损单、设止损止盈（填「点」数）。</li>',
       '<li>键盘：<code>↑</code> 做多、<code>↓</code> 做空、<code>空格</code> 一键平仓、<code>Esc</code> 撤销全部挂单、<code>T</code> 同步时钟。</li>',
-      '<li><b>时钟超前了怎么办</b>：进站默认就是 <b>1×</b>（实时），顶栏 <b>⏱ 实时</b> 亮绿表示正贴着服务器最新报价，',
-      '偏离超过 1.5 分钟会自动拉回来，不用管。点了 10× 以上的倍速，模拟时钟会甩到真实时间前面，那时候看到的价是模型生成的；',
-      '随时点 <b>⏱ 实时</b>（或按 <code>T</code>）就切回 1× 并对齐到最新真实报价，路径／K 线／净值曲线一起重算。</li>',
+      '<li><b>时钟超前了怎么办</b>：进站默认就是行情速度里的 <b>实时</b>（1×），顶栏 <b>● 实时 HH:MM</b> 亮绿表示正贴着服务器最新报价，',
+      '偏离超过 1.5 分钟会自动拉回来，不用管。点 10× 以上跑一阵，模拟时钟会甩到真实时间前面，那时候价格是模型生成的；',
+      '随时点 <b>实时</b>（或按 <code>T</code>）就切回 1× 并对齐到最新真实报价，路径／K 线／净值曲线一起重算。</li>',
       '<li>顶栏调行情速度（1× = 实时，1800× = 1 秒走半小时），账户会自动存档在你的浏览器里。</li>',
       '</ul>'
     ].join('');
