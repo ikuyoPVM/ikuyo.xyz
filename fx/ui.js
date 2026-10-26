@@ -641,6 +641,49 @@
     el.className = 'livechip ' + cls;
     el.textContent = txt;
     el.title = tip;
+    renderSyncBtn(ahead);
+  }
+
+  /* --------------------------------------------- 同步时钟（拨回实时）
+     倍速会把模拟时钟甩到真实时间前面，超前之后看到的价格就不再是真实盘中了。
+     这个按钮把时钟按回服务器最新的真实 tick 上（路径、K 线、净值曲线一起重算）。 */
+  function fmtSpan(ms) {
+    var m = Math.round(Math.abs(ms) / 60000);
+    if (m < 60) return m + ' 分钟';
+    var h = Math.floor(m / 60), mm = m % 60;
+    return h + ' 小时' + (mm ? ' ' + mm + ' 分' : '');
+  }
+
+  function syncClock() {
+    if (!live.ok || !live.quoteTs) return toast('还没有实时报价，等中继同步一次再试');
+    var gap = eng.clock - live.quoteTs;
+    if (Math.abs(gap) < 5000) return toast('已经在实时上了（' + liveClock(live.quoteTs) + '）');
+    eng.seekTo(live.quoteTs, { trimEquity: gap > 0 });
+    state.offset = 0;
+    state.zoom = 1;
+    refreshPanels(true);
+    drawChart();
+    drawEquity();
+    saveState();
+    toast((gap > 0 ? '时钟已回拨 ' : '时钟已前进 ') + fmtSpan(gap) +
+      ' · 对齐到实时 ' + liveClock(live.quoteTs));
+  }
+
+  function renderSyncBtn(aheadMin) {
+    var b = $('btnSync');
+    if (!b) return;
+    var gap = (live.ok && live.quoteTs) ? (eng.clock - live.quoteTs) : 0;
+    var off = Math.abs(gap);
+    if (!live.ok || off < 60000) {
+      b.hidden = true;
+      return;
+    }
+    b.hidden = false;
+    b.className = 'syncchip' + (gap > 0 ? ' ahead' : '');
+    b.textContent = gap > 0 ? '⏱ 拨回实时 ' + fmtSpan(gap) : '⏱ 对齐实时';
+    b.title = '模拟时钟' + (gap > 0 ? '已经跑到真实时间前面 ' : '落后真实时间 ') + fmtSpan(gap) +
+      '\n点一下把时钟按回服务器最新报价 ' + liveClock(live.quoteTs) + '（快捷键 T）' +
+      '\n' + (gap > 0 ? '超前区间里的价格是模型生成的，拨回后立刻恢复真实盘中。' : '');
   }
 
   function applyLive(L) {
@@ -795,6 +838,8 @@
 
     var chip = $('liveChip');
     if (chip) chip.addEventListener('click', function () { loadLive(); });
+    var sync = $('btnSync');
+    if (sync) sync.addEventListener('click', syncClock);
 
     $('levSeg').addEventListener('click', function (e) {
       var b = e.target.closest('button[data-lev]');
@@ -956,6 +1001,7 @@
       else if (e.key === 'ArrowDown') { e.preventDefault(); trade(-1); }
       else if (e.key === ' ') { e.preventDefault(); $('btnCloseAll').click(); }
       else if (e.key === 'Escape') { $('btnCancelAll').click(); }
+      else if (e.key === 't' || e.key === 'T') { e.preventDefault(); syncClock(); }
     });
 
     window.addEventListener('beforeunload', saveState);
@@ -1014,7 +1060,10 @@
       '<ul>',
       '<li>左边挑品种，中间选周期（M1 ~ D1），滚轮缩放、拖动平移、双击复位。</li>',
       '<li>右边填手数和杠杆，可以直接市价做多做空，也可以挂限价/止损单、设止损止盈（填「点」数）。</li>',
-      '<li>键盘：<code>↑</code> 做多、<code>↓</code> 做空、<code>空格</code> 一键平仓、<code>Esc</code> 撤销全部挂单。</li>',
+      '<li>键盘：<code>↑</code> 做多、<code>↓</code> 做空、<code>空格</code> 一键平仓、<code>Esc</code> 撤销全部挂单、<code>T</code> 同步时钟。</li>',
+      '<li><b>时钟超前了怎么办</b>：点倍速（10× 以上）跑一会儿，模拟时钟就会跑到真实时间前面，那时候看到的价就不是盘中了。',
+      '顶栏会出现 <b>⏱ 拨回实时 N 分钟</b>，点一下（或按 <code>T</code>）把时钟按回服务器最新报价，路径／K 线／净值曲线一起重算。',
+      '想一直贴在真实盘面上，就用 <b>1×</b>。</li>',
       '<li>顶栏调行情速度（1× = 实时，1800× = 1 秒走半小时），账户会自动存档在你的浏览器里。</li>',
       '</ul>'
     ].join('');
