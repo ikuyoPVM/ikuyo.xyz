@@ -57,12 +57,7 @@ header.topbar{
 .livechip.ok{color:#2bd6a0;border-color:#1f5c47;background:#0e1a16}
 .livechip.warn{color:#f0b90b;border-color:#5c4a15;background:#1a1608}
 .livechip.off{color:var(--dim2)}
-.syncchip{font-size:11px;white-space:nowrap;color:#f0b90b;border-color:#5c4a15;background:#1a1608}
-.syncchip:hover{background:#241d0a;border-color:#7a6318;color:#ffd257}
-.syncchip.ahead{color:#ffcf5c;border-color:#7a6318;background:#241d0a}
-.syncchip[hidden]{display:none}
-.syncchip.on{color:#2bd6a0;border-color:#1f5c47;background:#0e1a16}
-.syncchip.on:hover{background:#12241d;border-color:#2a7a5e;color:#57e8b6}
+#speeds button[data-sp="1"]{min-width:38px}
 /* 顶栏元素不压缩、不折行：多出来的宽度交给 .spacer */
 .topbar>*{flex:0 0 auto}
 .topbar>.spacer{flex:1 1 auto}
@@ -230,7 +225,7 @@ footer b{font-family:var(--mono);font-weight:500;color:var(--txt)}
   <div class="speeds" id="speeds">
     <span class="dim2" style="font-size:10px;margin-right:2px">行情速度</span>
     <button data-sp="0">暂停</button>
-    <button data-sp="1" class="on">1×</button>
+    <button data-sp="1" class="on" title="实时：贴着服务器最新报价跑，偏离了自动拉回（快捷键 T）">实时</button>
     <button data-sp="10">10×</button>
     <button data-sp="60">60×</button>
     <button data-sp="300">300×</button>
@@ -238,7 +233,6 @@ footer b{font-family:var(--mono);font-weight:500;color:var(--txt)}
   </div>
   <div class="sep"></div>
   <button id="liveChip" class="livechip off" title="实时数据状态">○ 离线</button>
-  <button id="btnSync" class="syncchip on" title="切到 1× 并对齐服务器最新的真实报价">⏱ 实时</button>
   <button id="btnColor" title="切换涨跌颜色习惯">绿涨</button>
   <button id="btnHelp" title="这套模拟的规则、数据真假、以及它不是什么">？机制</button>
   <button id="btnReset" title="清空账户，回到起点">⟳ 重开</button>
@@ -424,9 +418,9 @@ window.__errs = [];
   });
 })();
 </script>
-<script src="rates.js?v=13"></script>
-<script src="engine.js?v=13"></script>
-<script src="ui.js?v=13"></script>
+<script src="rates.js?v=14"></script>
+<script src="engine.js?v=14"></script>
+<script src="ui.js?v=14"></script>
 </body>
 </html>
 
