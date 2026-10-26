@@ -508,6 +508,12 @@
     return true;
   };
 
+  /* 没有实时数据可对齐时，至少让模拟时钟站在真实时间上（价格继续按模型走） */
+  Engine.prototype.alignToNow = function () {
+    if (Math.abs(Date.now() - this.clock) < 300000) return false;
+    return this.seekTo(Date.now(), { trimEquity: true });
+  };
+
   Engine.prototype._spreadFor = function (def, ms) {
     var h = new Date(ms).getUTCHours();
     var f = SESSION_SPREAD[h];
