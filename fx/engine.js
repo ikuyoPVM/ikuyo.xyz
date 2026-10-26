@@ -1,4 +1,4 @@
-﻿/* =============================================================================
+/* =============================================================================
    FX Fighter · engine.js
    -----------------------------------------------------------------------------
    真实外汇模拟撮合引擎。纯逻辑、无 DOM，可在 node 里直接跑单元测试。
@@ -505,6 +505,9 @@
 
   Engine.prototype._updateBars = function (st) {
     var name = st.def.name, def = st.def;
+    // 休市（周六、周日 UTC 21:00 前、周五 UTC 21:00 后）不开新 K 线：
+    // 否则图上会拉出一长条价位不动、看着像「空白」的死区
+    var open = this._tradable(this.clock);
     for (var i = 0; i < TFS.length; i++) {
       var tf = TFS[i];
       var key = name + tf.k;
@@ -513,6 +516,7 @@
       if (!arr) { arr = st.bars[key] = []; }
       var last = arr[arr.length - 1];
       if (!last || last.t < bucket) {
+        if (!open) continue;
         arr.push({ t: bucket, o: st.mid, h: st.mid, l: st.mid, c: st.mid });
         if (arr.length > 1400) arr.splice(0, arr.length - 1400);
       } else {
@@ -521,6 +525,16 @@
         last.c = st.mid;
       }
     }
+  };
+
+  /* 这个时刻市场在不在撮合（周末 / 周五收盘后不交易） */
+  Engine.prototype._tradable = function (ms) {
+    var d = new Date(ms);
+    var dow = d.getUTCDay(), h = d.getUTCHours();
+    if (dow === 6) return false;
+    if (dow === 0 && h < 21) return false;
+    if (dow === 5 && h >= 21) return false;
+    return true;
   };
 
   /* 某天第 mi 分钟的成交价（交叉盘按美元腿现算） */
@@ -548,6 +562,8 @@
         var endMin = idx === startIdx ? Math.floor(((savedClock - dstart) / DAY) * 1440) : 1440;
         for (var mi = 0; mi <= endMin; mi++) {
           var t = dstart + mi * 60000;
+          // 休市分钟不生成 K 线：图上就没有「价位不动」的假空白
+          if (!self._tradable(t)) continue;
           var px = self._minutePrice(name, idx, mi);
           if (idx === startIdx) { if (px > todayHi) todayHi = px; if (px < todayLo) todayLo = px; }
           for (var i = 0; i < TFS.length; i++) {
@@ -574,16 +590,20 @@
       var daily = [];
       var dFrom = Math.max(1, startIdx - 180);
       for (var di = dFrom; di <= startIdx - 1; di++) {
+        var dowD = new Date(self._dayStartForIdx(di)).getUTCDay();
+        if (dowD === 6 || dowD === 0) continue;     // 周末没有日线，别画成「平线」
         var o = self._closeAt(name, di - 1), c = self._closeAt(name, di);
         var wy = Math.abs(new RNG(self._seedFor(name, 700000 + di)).gauss()) * 0.55 + 0.2;
         var hi = Math.max(o, c) * (1 + st.def.sigma * wy * 0.45);
         var lo = Math.min(o, c) * (1 - st.def.sigma * wy * 0.45);
         daily.push({ t: self._dayStartForIdx(di), o: o, h: hi, l: lo, c: c, est: true });
       }
-      daily.push({
-        t: self._dayStartForIdx(startIdx), o: self._closeAt(name, startIdx - 1),
-        h: todayHi, l: todayLo, c: st.mid || self._closeAt(name, startIdx - 1)
-      });
+      if (isFinite(todayHi) && isFinite(todayLo)) {
+        daily.push({
+          t: self._dayStartForIdx(startIdx), o: self._closeAt(name, startIdx - 1),
+          h: todayHi, l: todayLo, c: st.mid || self._closeAt(name, startIdx - 1)
+        });
+      }
       st.bars[name + 'D1'] = daily.slice(-400);
     });
     // 报价统一在第二遍刷新：这样交叉盘拿到的一定是两条美元腿的最终价
