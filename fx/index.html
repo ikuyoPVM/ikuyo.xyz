@@ -53,6 +53,10 @@ header.topbar{
 .speeds{display:flex;gap:3px;align-items:center}
 .speeds button{padding:3px 7px;font-size:11px;border-radius:5px}
 .speeds button.on{background:#25324a;border-color:#3e567f;color:#cfe3ff}
+.livechip{font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.livechip.ok{color:#2bd6a0;border-color:#1f5c47;background:#0e1a16}
+.livechip.warn{color:#f0b90b;border-color:#5c4a15;background:#1a1608}
+.livechip.off{color:var(--dim2)}
 
 /* ── 布局 ── */
 main.layout{
@@ -223,6 +227,7 @@ footer b{font-family:var(--mono);font-weight:500;color:var(--txt)}
     <button data-sp="1800">1800×</button>
   </div>
   <div class="sep"></div>
+  <button id="liveChip" class="livechip off" title="实时数据状态">○ 离线</button>
   <button id="btnColor" title="切换涨跌颜色习惯">绿涨</button>
   <button id="btnHelp" title="这套模拟的规则、数据真假、以及它不是什么">？机制</button>
   <button id="btnReset" title="清空账户，回到起点">⟳ 重开</button>
