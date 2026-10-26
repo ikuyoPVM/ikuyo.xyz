@@ -57,6 +57,10 @@ header.topbar{
 .livechip.ok{color:#2bd6a0;border-color:#1f5c47;background:#0e1a16}
 .livechip.warn{color:#f0b90b;border-color:#5c4a15;background:#1a1608}
 .livechip.off{color:var(--dim2)}
+.syncchip{font-size:11px;white-space:nowrap;color:#f0b90b;border-color:#5c4a15;background:#1a1608}
+.syncchip:hover{background:#241d0a;border-color:#7a6318;color:#ffd257}
+.syncchip.ahead{color:#ffcf5c;border-color:#7a6318;background:#241d0a}
+.syncchip[hidden]{display:none}
 
 /* ── 布局 ── */
 main.layout{
@@ -228,6 +232,7 @@ footer b{font-family:var(--mono);font-weight:500;color:var(--txt)}
   </div>
   <div class="sep"></div>
   <button id="liveChip" class="livechip off" title="实时数据状态">○ 离线</button>
+  <button id="btnSync" class="syncchip" hidden title="把模拟时钟按回服务器最新的真实报价">⏱ 拨回实时</button>
   <button id="btnColor" title="切换涨跌颜色习惯">绿涨</button>
   <button id="btnHelp" title="这套模拟的规则、数据真假、以及它不是什么">？机制</button>
   <button id="btnReset" title="清空账户，回到起点">⟳ 重开</button>
@@ -413,9 +418,9 @@ window.__errs = [];
   });
 })();
 </script>
-<script src="rates.js?v=7"></script>
-<script src="engine.js?v=7"></script>
-<script src="ui.js?v=7"></script>
+<script src="rates.js?v=8"></script>
+<script src="engine.js?v=8"></script>
+<script src="ui.js?v=8"></script>
 </body>
 </html>
 
