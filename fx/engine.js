@@ -469,6 +469,39 @@
     return true;
   };
 
+  /* 把模拟时钟直接搬到某个时刻（"同步到实时"按钮用）。
+     倍速跑久了时钟会甩到真实时间前面，那一刻之后的行情就是模型生成的；
+     这个方法把时钟按回服务器最新的真实 tick 上，路径、K 线、净值曲线一起重算。 */
+  Engine.prototype.seekTo = function (ms, opts) {
+    if (!(ms > 0) || !isFinite(ms)) return false;
+    var self = this;
+    var before = this.clock;
+    this.clock = ms;
+    // 路径缓存失效（跨天会换 idx）
+    Object.keys(this.sym).forEach(function (n) { self.sym[n].pathIdx = -1; });
+    // 净值曲线：砍掉「跑到未来」的那一段，再补一个当前点
+    if (opts && opts.trimEquity) {
+      var keep = [];
+      for (var i = 0; i < this.equityCurve.length; i++) {
+        if (this.equityCurve[i].t <= ms) keep.push(this.equityCurve[i]);
+      }
+      this.equityCurve = keep;
+      this.lastEquityPush = 0;
+    }
+    this._seedBars(2);
+    Object.keys(this.sym).forEach(function (n) {
+      var st = self.sym[n];
+      st.dayIdx = self._dayIdx(self.clock);
+      self._refreshQuoteAt(st, self.clock);
+    });
+    this.lastEquityPush = 0;
+    this._pushEquity(0);
+    this.marketWasOpen = this.marketOpen(this.clock);
+    this.lastServerDay = this._serverDay(this.clock);
+    this.seekInfo = { from: before, to: this.clock, deltaMs: this.clock - before };
+    return true;
+  };
+
   Engine.prototype._spreadFor = function (def, ms) {
     var h = new Date(ms).getUTCHours();
     var f = SESSION_SPREAD[h];
