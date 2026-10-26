@@ -61,6 +61,10 @@ header.topbar{
 .syncchip:hover{background:#241d0a;border-color:#7a6318;color:#ffd257}
 .syncchip.ahead{color:#ffcf5c;border-color:#7a6318;background:#241d0a}
 .syncchip[hidden]{display:none}
+/* 顶栏元素不压缩、不折行：多出来的宽度交给 .spacer */
+.topbar>*{flex:0 0 auto}
+.topbar>.spacer{flex:1 1 auto}
+.topbar button,.topbar .topval,.topbar .brand,.topbar .speeds{white-space:nowrap}
 
 /* ── 布局 ── */
 main.layout{
@@ -418,9 +422,9 @@ window.__errs = [];
   });
 })();
 </script>
-<script src="rates.js?v=9"></script>
-<script src="engine.js?v=9"></script>
-<script src="ui.js?v=9"></script>
+<script src="rates.js?v=10"></script>
+<script src="engine.js?v=10"></script>
+<script src="ui.js?v=10"></script>
 </body>
 </html>
 
