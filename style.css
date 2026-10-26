@@ -1,4 +1,4 @@
-* {
+﻿* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -517,4 +517,90 @@ h2 a:hover, h3 a:hover {
         width: calc(100% - 24px) !important;
         padding: 18px !important;
     }
+}
+
+/* ===== FX 模拟入口（新栏目） ===== */
+nav a.fx-nav {
+    color: #FFD54A !important;
+    font-weight: 700;
+}
+
+nav a.fx-nav:hover {
+    color: #fff !important;
+}
+
+.fx-tuiguang {
+    clear: both;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 22px;
+    width: 100%;
+    margin: 0 0 22px;
+    padding: 18px 20px;
+    background: linear-gradient(115deg, #14161c 0%, #1d222c 55%, #14161c 100%);
+    border-left: 5px solid #B80000;
+    border-radius: 6px;
+}
+
+.fx-tuiguang-wen {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.fx-tuiguang-wen h3 {
+    margin: 8px 0 6px;
+    font-size: 18px;
+    line-height: 1.4;
+}
+
+.fx-tuiguang-wen h3 a {
+    color: #f2f6ff;
+    text-decoration: none;
+}
+
+.fx-tuiguang-wen h3 a:hover {
+    color: #FFD54A;
+}
+
+.fx-tuiguang-wen p {
+    margin: 0;
+    color: #a9b4c4;
+    font-size: 13.5px;
+    line-height: 1.75;
+}
+
+.fx-tuiguang .xinwen-biaoqian {
+    background-color: #B80000;
+    color: #fff;
+}
+
+.fx-tuiguang-btn {
+    flex: 0 0 auto;
+    display: inline-block;
+    padding: 11px 20px;
+    border-radius: 4px;
+    background: #B80000;
+    color: #fff !important;
+    font-weight: 700;
+    font-size: 14px;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background .15s ease;
+}
+
+.fx-tuiguang-btn:hover {
+    background: #e00000;
+}
+
+@media (max-width: 720px) {
+    .fx-tuiguang {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+        padding: 16px;
+    }
+    .fx-tuiguang-wen h3 { font-size: 16px; }
+    .fx-tuiguang-btn { text-align: center; }
 }
