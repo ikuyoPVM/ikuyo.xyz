@@ -589,10 +589,98 @@
     $('connDot').className = 'dot' + (open ? '' : ' off');
     var idx = eng._dayIdx(eng.clock);
     var isReal = eng._isReal(idx);
-    $('statusSrc').innerHTML = (isReal ? 'ECB 真实收盘 · 锚定至 ' + prettyDate(world.dates[world.n - 1]) : '模拟日（真实数据已走完）') +
-      ' · ' + (open ? '市场开盘中' : '休市');
+    var src;
+    if (live.ok) {
+      var ageMin = Math.round((Date.now() - live.ts) / 60000);
+      src = 'ECB 日线至 ' + prettyDate(world.dates[world.n - 1]) + ' · 真实盘中 ' + liveClock(live.ts) +
+        (ageMin >= 2 ? '（' + ageMin + ' 分钟前）' : '');
+    } else {
+      src = (isReal ? 'ECB 真实收盘 · 锚定至 ' + prettyDate(world.dates[world.n - 1]) : '模拟日（真实数据已走完）');
+    }
+    $('statusSrc').innerHTML = src + ' · ' + (open ? '市场开盘中' : '休市');
     $('statusLeft').textContent = eng.positions.length + ' 持仓 · ' + eng.orders.length + ' 挂单 · ' + (state.speed ? state.speed + '×' : '暂停');
     $('closedNotice').hidden = open;
+    renderLiveChip();
+  }
+
+  /* ------------------------------------------------------- 实时数据（live.js）
+     服务器上有个常驻中继每分钟抓一次真实汇率（不管有没有人来玩），
+     写成 fx/live.js。这里用 <script> 拉它，天然跨域，Pages 版也能读服务器那份。 */
+  var live = { ok: false, ts: 0, src: '', quoteTs: 0, legs: 0, apiSource: '' };
+  var LIVE_URL = /(^|\.)github\.io$/i.test(location.hostname)
+    ? 'https://ikuyo.xyz/fx/live.js'
+    : 'live.js';
+
+  function liveClock(ms) {
+    var d = srvDate(ms);
+    return p2(d.getUTCHours()) + ':' + p2(d.getUTCMinutes());
+  }
+
+  function renderLiveChip() {
+    var el = $('liveChip');
+    if (!el) return;
+    var ageMin = live.ts ? (Date.now() - live.ts) / 60000 : Infinity;
+    var cls, txt, tip;
+    if (live.ok && ageMin < 3) {
+      cls = 'ok'; txt = '● 实时 ' + liveClock(live.ts);
+      tip = '真实盘中报价，服务器每 60 秒同步一次\n源：' + live.src + '\n最近一条报价：' + new Date(live.quoteTs || live.ts).toISOString().slice(11, 19) + ' UTC';
+    } else if (live.ok && ageMin < 30) {
+      cls = 'warn'; txt = '● 实时 · ' + Math.round(ageMin) + ' 分钟前';
+      tip = '最后一条真实报价已经过了 ' + Math.round(ageMin) + ' 分钟（可能休市或中继在重连）\n源：' + live.src;
+    } else {
+      cls = 'off'; txt = '○ 离线（内置数据）';
+      tip = '没拿到实时报价：' + (live.apiSource || 'live.js 不可达') + '\n行情按内置 ECB 日线 + 模型走';
+    }
+    el.className = 'livechip ' + cls;
+    el.textContent = txt;
+    el.title = tip;
+  }
+
+  function applyLive(L) {
+    if (!L || !(L.days || L.tape)) return false;
+    var legs = eng.setLive(L);
+    if (!legs) return false;
+    live.ok = true;
+    live.ts = (L.ts || 0) * 1000;
+    live.quoteTs = (L.quoteTs || L.ts || 0) * 1000;
+    live.src = L.src || 'live.js';
+    live.legs = legs;
+    live.apiSource = '';
+    return true;
+  }
+
+  var liveTimer = null;
+  function setSpeed(v) {
+    state.speed = v;
+    document.querySelectorAll('#speeds button').forEach(function (b) { b.classList.toggle('on', +b.dataset.sp === v); });
+    var sl = $('statusLeft');
+    if (sl) sl.textContent = v ? '行情 ' + v + '×' : '已暂停';
+  }
+
+  function loadLive() {
+    var s = document.createElement('script');
+    s.src = LIVE_URL + '?t=' + Date.now();
+    s.onload = function () {
+      s.remove();
+      var first = !live.ok;
+      if (applyLive(window.FX_LIVE)) {
+        refreshPanels(true);
+        if (first) {
+          // 第一次拿到实时数据：把行情速度切到 1×，别让 60× 的模拟时钟一秒冲出真实区间
+          if (!restored) { setSpeed(1); toast('已接入真实盘中报价（' + live.src + '），行情速度切到 1×'); }
+          else toast('已接入真实盘中报价（' + live.src + '）');
+        }
+      } else {
+        live.ok = false; live.apiSource = window.FX_LIVE ? 'live.js 内容为空' : 'live.js 无数据';
+        renderLiveChip();
+      }
+    };
+    s.onerror = function () {
+      s.remove();
+      live.ok = false; live.apiSource = '取 ' + LIVE_URL + ' 失败';
+      renderLiveChip();
+    };
+    document.head.appendChild(s);
   }
 
   /* ------------------------------------------------------------ 面板刷新 */
@@ -687,9 +775,7 @@
     $('speeds').addEventListener('click', function (e) {
       var b = e.target.closest('button[data-sp]');
       if (!b) return;
-      state.speed = +b.dataset.sp;
-      document.querySelectorAll('#speeds button').forEach(function (x) { x.classList.toggle('on', x === b); });
-      $('statusLeft').textContent = state.speed ? '行情 ' + state.speed + '×' : '已暂停';
+      setSpeed(+b.dataset.sp);
     });
 
     $('levSeg').addEventListener('click', function (e) {
@@ -872,7 +958,10 @@
       '从 2022-01 到 <b>' + prettyDate(last) + '</b>，共 ' + world.n + ' 个交易日，随页面一起打包在 <code>rates.js</code> 里（抓取脚本 <code>tools/build_rates.py</code> 也在）。</li>',
       '<li><b>13 个品种全部由这张 EUR 基准表换算出来</b>：EURUSD 取 USD 那条，USDJPY = JPY÷USD，GBPUSD = USD÷GBP……',
       '交叉盘（EURJPY / EURGBP / EURCHF / GBPJPY / AUDJPY）不是独立乱走的，一律按两条美元腿相乘除，所以三角一致性是严格的 0 偏差。</li>',
-      '<li><b>日内的 1 分钟路径是模拟的</b>：用布朗桥把当天挂在「昨天真实收盘 → 今天真实收盘」之间，',
+      '<li><b>实时盘中也是真的（最近这几小时）</b>：服务器上有个常驻中继，每分钟抓一次真实汇率写进 <code>live.js</code>，',
+      '页面顶栏的「● 实时」就是它。今天已经走过的每一分钟都会被换成真实报价，13 个品种按同一套三角公式由 8 条 EUR 基准腿折出来。',
+      '中继没跑起来、或者进入深夜休市的时候，会显示「N 分钟前」或「离线」。</li>',
+      '<li><b>更早的日内路径是模拟的</b>：中继上线之前的分钟、以及还没走到的未来，用布朗桥把当天挂在「昨天真实收盘 → 今天真实收盘」之间，',
       '波动率按品种、按 UTC 小时（东京 / 伦敦 / 纽约重叠时段最猛）加权，所以 <b>每天 23:59 的价格会精确落回真实收盘</b>，中间怎么走是模型生成的。</li>',
       '<li>真实数据用完之后（最后一个交易日之后），收盘价本身也转为模拟（按品种日波动率生成），底部状态栏会标「模拟日」。</li>',
       '<li><b>日线的历史高低点不是官方数据</b>：没有免费的历史逐日高低价，D1 那根蜡烛的开／收是真的，上下影线是按波动率估的，鼠标悬停会标出来。</li>',
@@ -933,6 +1022,11 @@
   renderSymList();
   bind();
   refreshPanels(true);
+  loadLive();
+  setInterval(loadLive, 60000);
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && Date.now() - live.ts > 45000) loadLive();
+  });
   requestAnimationFrame(loop);
   if (restored) toast('已恢复上次的账户与进度');
 })();
