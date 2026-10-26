@@ -606,7 +606,7 @@
   /* ------------------------------------------------------- 实时数据（live.js）
      服务器上有个常驻中继每分钟抓一次真实汇率（不管有没有人来玩），
      写成 fx/live.js。这里用 <script> 拉它，天然跨域，Pages 版也能读服务器那份。 */
-  var live = { ok: false, ts: 0, src: '', quoteTs: 0, legs: 0, apiSource: '' };
+  var live = { ok: false, ts: 0, src: '', quoteTs: 0, legs: 0, days: 0, apiSource: '' };
   var LIVE_URL = /(^|\.)github\.io$/i.test(location.hostname)
     ? 'https://ikuyo.xyz/fx/live.js'
     : 'live.js';
@@ -620,10 +620,17 @@
     var el = $('liveChip');
     if (!el) return;
     var ageMin = live.ts ? (Date.now() - live.ts) / 60000 : Infinity;
+    var ahead = (live.ok && live.quoteTs) ? (eng.clock - live.quoteTs) / 60000 : 0;
     var cls, txt, tip;
-    if (live.ok && ageMin < 3) {
+    if (live.ok && ageMin < 3 && ahead > 10) {
+      cls = 'warn'; txt = '● 实时 · 时钟超前 ' + Math.round(ahead) + 'm';
+      tip = '服务器数据是新的，但你点了倍速，模拟时钟已经跑到真实时间之后 ' + Math.round(ahead) + ' 分钟\n' +
+        '再往后走的价格是模型生成的（回到 1× 就重新对齐）\n源：' + live.src;
+    } else if (live.ok && ageMin < 3) {
       cls = 'ok'; txt = '● 实时 ' + liveClock(live.ts);
-      tip = '真实盘中报价，服务器每 60 秒同步一次\n源：' + live.src + '\n最近一条报价：' + new Date(live.quoteTs || live.ts).toISOString().slice(11, 19) + ' UTC';
+      tip = '真实盘中报价，服务器每 60 秒同步一次（没有人玩的时候也在同步）\n源：' + live.src +
+        '\n覆盖 ' + (live.days || 1) + ' 天 / ' + live.legs + ' 条腿 / 13 个品种' +
+        '\n最近一条报价：' + new Date(live.quoteTs || live.ts).toISOString().slice(11, 19) + ' UTC';
     } else if (live.ok && ageMin < 30) {
       cls = 'warn'; txt = '● 实时 · ' + Math.round(ageMin) + ' 分钟前';
       tip = '最后一条真实报价已经过了 ' + Math.round(ageMin) + ' 分钟（可能休市或中继在重连）\n源：' + live.src;
@@ -638,6 +645,12 @@
 
   function applyLive(L) {
     if (!L || !(L.days || L.tape)) return false;
+    // 太旧的 live.js 不用（比如本地留的旧快照），免得把几小时前的价格当成「现在」
+    if (L.ts && (Date.now() / 1000 - L.ts) > 6 * 3600) {
+      live.ok = false; live.ts = (L.ts || 0) * 1000;
+      live.apiSource = 'live.js 已过期 ' + Math.round((Date.now() / 1000 - L.ts) / 3600) + ' 小时';
+      return false;
+    }
     var legs = eng.setLive(L);
     if (!legs) return false;
     live.ok = true;
@@ -645,6 +658,7 @@
     live.quoteTs = (L.quoteTs || L.ts || 0) * 1000;
     live.src = L.src || 'live.js';
     live.legs = legs;
+    live.days = L.days ? L.days.length : 1;
     live.apiSource = '';
     return true;
   }
