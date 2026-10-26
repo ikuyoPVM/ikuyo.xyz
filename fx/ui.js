@@ -657,7 +657,7 @@
   function syncClock() {
     if (!live.ok || !live.quoteTs) return toast('还没有实时报价，等中继同步一次再试');
     var gap = eng.clock - live.quoteTs;
-    if (Math.abs(gap) < 5000) return toast('已经在实时上了（' + liveClock(live.quoteTs) + '）');
+    if (Math.abs(gap) < 30000) return toast('已经在实时上了（' + liveClock(live.quoteTs) + '）');
     eng.seekTo(live.quoteTs, { trimEquity: gap > 0 });
     state.offset = 0;
     state.zoom = 1;
@@ -672,18 +672,28 @@
   function renderSyncBtn(aheadMin) {
     var b = $('btnSync');
     if (!b) return;
-    var gap = (live.ok && live.quoteTs) ? (eng.clock - live.quoteTs) : 0;
-    var off = Math.abs(gap);
-    if (!live.ok || off < 60000) {
+    if (!live.ok || !live.quoteTs) { b.hidden = true; return; }
+    // 判据用「服务器最近一次抓取时间」当现在：1× 下模拟时钟本来就贴着它，
+    // 留 2.5 分钟余量，免得一直挂着一个「1 分钟」的按钮
+    var realNow = live.ts || live.quoteTs;
+    var drift = eng.clock - realNow;
+    var back = eng.clock - live.quoteTs;          // 真要按回多少
+    if (drift > 150000) {
+      b.hidden = false;
+      b.className = 'syncchip ahead';
+      b.textContent = '⏱ 拨回实时 ' + fmtSpan(back);
+      b.title = '模拟时钟已经跑到真实时间前面 ' + fmtSpan(drift) + '，这一段的价格是模型生成的' +
+        '\n点一下把时钟按回服务器最新报价 ' + liveClock(live.quoteTs) + '（快捷键 T）' +
+        '\n路径 / K 线 / 净值曲线会一起重算，持仓和挂单不动';
+    } else if (drift < -300000) {
+      b.hidden = false;
+      b.className = 'syncchip';
+      b.textContent = '⏱ 对齐实时';
+      b.title = '模拟时钟落后真实时间 ' + fmtSpan(-drift) + '（比如刚暂停过）' +
+        '\n点一下把时钟推到服务器最新报价 ' + liveClock(live.quoteTs) + '（快捷键 T）';
+    } else {
       b.hidden = true;
-      return;
     }
-    b.hidden = false;
-    b.className = 'syncchip' + (gap > 0 ? ' ahead' : '');
-    b.textContent = gap > 0 ? '⏱ 拨回实时 ' + fmtSpan(gap) : '⏱ 对齐实时';
-    b.title = '模拟时钟' + (gap > 0 ? '已经跑到真实时间前面 ' : '落后真实时间 ') + fmtSpan(gap) +
-      '\n点一下把时钟按回服务器最新报价 ' + liveClock(live.quoteTs) + '（快捷键 T）' +
-      '\n' + (gap > 0 ? '超前区间里的价格是模型生成的，拨回后立刻恢复真实盘中。' : '');
   }
 
   function applyLive(L) {
