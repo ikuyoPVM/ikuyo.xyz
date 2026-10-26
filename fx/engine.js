@@ -292,8 +292,159 @@
       path[j] = Math.exp(l0 + (l1 - l0) * (j / M) + bridge);
     }
     path[0] = y0; path[M] = y1;
+    path = this._applyLive(name, idx, path, dstart);
     st.path = path; st.pathIdx = idx;
     return path;
+  };
+
+  /* ------------------------------------------------- 真实 tick 覆盖（实时层）
+     live.js 由服务器上的中继每分钟抓一次真实汇率写出来，形如
+       { ts, quoteTs, legs:{USD:1.12,...}, tape:{USD:"1793012340:1.11941,..."} }
+     tape 里是「当天 UTC 00:00 起」的真实报价。这里把当天已经走完的分钟
+     直接换成真实价：覆盖区间用真实值线性插值，覆盖区之前/之后沿用原来的
+     布朗桥形状、只做对数平移把它们焊上去 —— 于是图表上今天的行情是真的，
+     收盘价仍然会收到 ECB 公布的日线上。 */
+  Engine.prototype._applyLive = function (name, idx, path, dstart) {
+    var byDay = this.liveTape && this.liveTape[name];
+    var tape = byDay && byDay.days && byDay.days[dstart];
+    if (!tape || !tape.length) return path;
+    var M = 1440, ticks = tape;
+    var real = new Float64Array(M + 1), have = new Uint8Array(M + 1);
+    for (var i = 0; i < ticks.length; i++) {
+      var px = ticks[i][1];
+      if (!(px > 0)) continue;
+      var mi = Math.floor((ticks[i][0] * 1000 - dstart) / 60000);
+      if (mi < 0) mi = 0;
+      if (mi > M) mi = M;
+      real[mi] = px; have[mi] = 1;
+    }
+    var first = -1, last = -1;
+    for (var m = 0; m <= M; m++) if (have[m]) { if (first < 0) first = m; last = m; }
+    if (first < 0) return path;
+
+    // 真实值之间补点
+    var prev = first;
+    for (var k = first + 1; k <= last; k++) {
+      if (have[k]) { prev = k; continue; }
+      var nx = k;
+      while (nx <= last && !have[nx]) nx++;
+      var a = real[prev], b = have[nx] ? real[nx] : a;
+      real[k] = a + (b - a) * ((nx > prev) ? (k - prev) / (nx - prev) : 0);
+      have[k] = 2;
+    }
+    tape.covered = [first, last];
+
+    // 覆盖前先记下合成路径在这两个点上的值（后面要拿它们做对数平移的基准）
+    var pFirstSynth = path[first], pLastSynth = path[last];
+    // 覆盖区之前：把合成形状的「偏离直线」保留，直线两端改成 昨收 → 第一个真实价
+    var y0 = path[0], rFirst = real[first];
+    if (first > 0 && y0 > 0 && pFirstSynth > 0 && rFirst > 0) {
+      var l0 = Math.log(y0), l1 = Math.log(rFirst), lb = Math.log(pFirstSynth);
+      for (var j = 1; j < first; j++) {
+        var u = j / first;
+        var lineOld = l0 + (lb - l0) * u;
+        var lineNew = l0 + (l1 - l0) * u;
+        path[j] = Math.exp(Math.log(path[j]) - lineOld + lineNew);
+      }
+    }
+    // 覆盖区：真实值
+    for (var k2 = first; k2 <= last; k2++) path[k2] = real[k2];
+    // 覆盖区之后：从最后一个真实价出发，沿用合成形状走到当天的合成收盘
+    if (last < M && real[last] > 0 && pLastSynth > 0) {
+      var off = Math.log(real[last]) - Math.log(pLastSynth);
+      for (var k3 = last + 1; k3 <= M; k3++) path[k3] = Math.exp(Math.log(path[k3]) + off);
+    }
+    path[last] = real[last];
+    return path;
+  };
+
+  /* 把一份 live.js 灌进引擎：清掉路径缓存、重建首页那几根 K 线，再刷新报价。
+     live.js 里的 tape 是按【EUR 基准的腿】存的（USD / JPY / GBP / …），
+     这里按每个货币对自己的换算公式（SYM_DEFS[i].f）把腿价拼成该品种的真实价序列，
+     所以交叉盘的三角一致性跟 rates.js 那条路完全一样。 */
+  Engine.prototype.setLive = function (live) {
+    if (!live) return 0;
+    var self = this;
+    // 兼容两种格式：新的 live.days=[{d:<UTC 零点秒>, tape:{腿:"ts:价,..."}}]，旧的 live.tape
+    var days = live.days;
+    if (!days && live.tape) {
+      days = [{ d: Math.floor((live.ts || Date.now() / 1000) / 86400) * 86400, tape: live.tape }];
+    }
+    if (!days || !days.length) return 0;
+
+    var liveTape = {}, legNames = {}, applied = 0;
+    this.liveDiag = { days: days.length, legs: 0, ticks: 0, pairs: 0, reason: 'start' };
+    days.forEach(function (day) {
+      var dstartMs = day.d * 1000;
+      var legMap = {}, stamps = {}, legs = 0;
+      Object.keys(day.tape || {}).forEach(function (leg) {
+        var m = {};
+        String(day.tape[leg] || '').split(',').forEach(function (pair) {
+          var c = pair.split(':');
+          if (c.length < 2) return;
+          var ts = +c[0], px = +c[1];
+          if (ts > 0 && px > 0) { m[ts] = px; stamps[ts] = 1; }
+        });
+        if (Object.keys(m).length >= 2) { legMap[leg] = m; legs++; legNames[leg] = 1; }
+      });
+      if (!legs) { self.liveDiag.reason = 'no legs with 2+ ticks'; return; }
+      var allTs = Object.keys(stamps).map(Number).sort(function (a, b) { return a - b; });
+      var names = Object.keys(legMap);
+      var series = {};
+      self.world.symbols.forEach(function (s) { series[s.name] = []; });
+      for (var i = 0; i < allTs.length; i++) {
+        var ts = allTs[i], E = { EUR: 1 }, ok = true;
+        for (var j = 0; j < names.length; j++) {
+          var v = legMap[names[j]][ts];
+          if (!v) { ok = false; break; }
+          E[names[j]] = v;
+        }
+        if (!ok) continue;
+        for (var k = 0; k < SYM_DEFS.length; k++) {
+          var px = SYM_DEFS[k].f(E);
+          if (px > 0 && isFinite(px)) series[SYM_DEFS[k].n].push([ts, px]);
+        }
+      }
+      Object.keys(series).forEach(function (name) {
+        if (series[name].length < 2) return;
+        var e = liveTape[name] || (liveTape[name] = { days: {} });
+        e.days[dstartMs] = series[name];
+        applied++;
+      });
+    });
+    this.liveDiag.legs = Object.keys(legNames).length;
+    this.liveDiag.pairs = applied;
+    if (!applied) { this.liveDiag.reason = 'no pair series'; return 0; }
+    this.liveDiag.reason = 'ok';
+
+    this.liveTape = liveTape;
+    this.liveMeta = {
+      ts: (live.ts || 0) * 1000, quoteTs: (live.quoteTs || live.ts || 0) * 1000,
+      src: live.src || 'live', legs: Object.keys(legNames), pairs: applied,
+      days: Object.keys(days).length
+    };
+    Object.keys(this.sym).forEach(function (n) { self.sym[n].pathIdx = -1; });
+    // 第一次拿到实时数据：把模拟时钟直接搬到最后一个真实 tick 上
+    // （内置日线只到上一个交易日，不搬的话还停在几天前的 08:00，看不到真实盘中）
+    if (!this._liveJumped) {
+      var lastTs = 0;
+      Object.keys(this.liveTape).forEach(function (k) {
+        var dd = self.liveTape[k].days;
+        Object.keys(dd).forEach(function (d) {
+          var t = dd[d];
+          if (t.length && t[t.length - 1][0] > lastTs) lastTs = t[t.length - 1][0];
+        });
+      });
+      if (lastTs * 1000 > this.clock + 60000) {
+        this.clock = lastTs * 1000;
+        this.lastEquityPush = 0;
+        this._liveJumped = true;
+        this.liveJumped = true;
+      }
+    }
+    this._seedBars(2);                 // 用真实 tick 重建今天这一段分钟线
+    Object.keys(this.sym).forEach(function (n) { self._refreshQuoteAt(self.sym[n], self.clock); });
+    return applied;
   };
 
   Engine.prototype.marketOpen = function (ms) {
