@@ -26,7 +26,7 @@
   'use strict';
 
   var DAY = 86400000;
-  var SERVER_OFFSET = 3 * 3600000;   // 服务器时间 = UTC+3（主流零售券商惯例）
+  var SERVER_OFFSET = 8 * 3600000;   // 服务器时间 = UTC+8（北京时间）
   var CONTRACT = 100000;             // 1 手基础货币单位
   var MIN_LOT = 0.01, LOT_STEP = 0.01, MAX_LOT = 100;
   var COMMISSION_PER_LOT = 3.5;      // 每手每单边
@@ -505,9 +505,9 @@
   Engine.prototype._spreadFor = function (def, ms) {
     var h = new Date(ms).getUTCHours();
     var f = SESSION_SPREAD[h];
-    // 每日结算（服务器 00:00 = UTC 21:00）前后 20 分钟点差放大
+    // 每日结算（服务器 00:00 = UTC 16:00）前后 20 分钟点差放大
     var m = new Date(ms).getUTCMinutes() + h * 60;
-    var minsToRoll = (21 * 60 - m + 1440) % 1440;
+    var minsToRoll = (16 * 60 - m + 1440) % 1440;
     if (minsToRoll <= 20) f *= 3.2;
     // 周末开盘第一小时更宽
     var d = new Date(ms);
