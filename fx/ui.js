@@ -793,6 +793,9 @@
       setSpeed(+b.dataset.sp);
     });
 
+    var chip = $('liveChip');
+    if (chip) chip.addEventListener('click', function () { loadLive(); });
+
     $('levSeg').addEventListener('click', function (e) {
       var b = e.target.closest('button[data-lev]');
       if (!b) return;
