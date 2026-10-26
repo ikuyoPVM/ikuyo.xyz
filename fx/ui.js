@@ -1135,7 +1135,9 @@
       state: state,
       refresh: function () { refreshPanels(true); },
       trade: trade,
-      save: saveState
+      save: saveState,
+      sync: syncClock,
+      autoSync: maybeAutoSync
     },
     configurable: true
   });
@@ -1144,6 +1146,8 @@
   refreshPanels(true);
   loadLive();
   setInterval(loadLive, 60000);
+  // 后台标签页 rAF 会被节流，另开一条慢速兜底：回到前台 15 秒内一定对齐
+  setInterval(function () { maybeAutoSync(); }, 15000);
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden && Date.now() - live.ts > 45000) loadLive();
   });
