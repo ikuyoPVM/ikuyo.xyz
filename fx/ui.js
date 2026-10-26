@@ -718,8 +718,8 @@
 
   function applyLive(L) {
     if (!L || !(L.days || L.tape)) return false;
-    // 太旧的 live.js 不用（比如本地留的旧快照），免得把几小时前的价格当成「现在」
-    if (L.ts && (Date.now() / 1000 - L.ts) > 3 * 3600) {
+    // 太旧的 live.js 不用（比如本地留的旧快照），免得把半天前的价格当成「现在」
+    if (L.ts && (Date.now() / 1000 - L.ts) > 12 * 3600) {
       live.ok = false; live.ts = (L.ts || 0) * 1000;
       live.apiSource = 'live.js 已过期 ' + Math.round((Date.now() / 1000 - L.ts) / 3600) + ' 小时';
       return false;
@@ -767,9 +767,23 @@
           syncClock({ quiet: true });
           toast('已接入真实盘中报价（' + live.src + '）· 1× 实时，自动同步');
         }
+        // 报价已经不新了（中继休息）：真实 tick 照用，但时钟要站在真实时间上
+        if ((Date.now() - live.ts) > 30 * 60000) {
+          eng.alignToNow();
+          refreshPanels(true);
+          drawChart();
+          drawEquity();
+        }
       } else {
         live.ok = false; live.apiSource = window.FX_LIVE ? 'live.js 内容为空' : 'live.js 无数据';
         renderLiveChip();
+      }
+      // 没有可用的实时数据时，模拟时钟也要站在「现在」上，而不是停在数据尾部
+      if (!live.ok && Math.abs(Date.now() - eng.clock) > 5 * 60000) {
+        eng.alignToNow();
+        refreshPanels(true);
+        drawChart();
+        drawEquity();
       }
     };
     s.onerror = function () {
