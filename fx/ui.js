@@ -623,7 +623,7 @@
     var ahead = (live.ok && live.quoteTs) ? (eng.clock - live.quoteTs) / 60000 : 0;
     var cls, txt, tip;
     if (live.ok && ageMin < 3 && ahead > 10) {
-      cls = 'warn'; txt = '● 实时 · 时钟超前 ' + Math.round(ahead) + 'm';
+      cls = 'warn'; txt = '● 超前 ' + Math.round(ahead) + 'm';
       tip = '服务器数据是新的，但你点了倍速，模拟时钟已经跑到真实时间之后 ' + Math.round(ahead) + ' 分钟\n' +
         '再往后走的价格是模型生成的（回到 1× 就重新对齐）\n源：' + live.src;
     } else if (live.ok && ageMin < 3) {
@@ -654,6 +654,14 @@
     return h + ' 小时' + (mm ? ' ' + mm + ' 分' : '');
   }
 
+  /* 顶栏里用的紧凑写法：47m / 3h20 */
+  function fmtShort(ms) {
+    var m = Math.round(Math.abs(ms) / 60000);
+    if (m < 60) return m + 'm';
+    var h = Math.floor(m / 60), mm = m % 60;
+    return h + 'h' + (mm ? p2(mm) : '');
+  }
+
   function syncClock() {
     if (!live.ok || !live.quoteTs) return toast('还没有实时报价，等中继同步一次再试');
     var gap = eng.clock - live.quoteTs;
@@ -681,7 +689,7 @@
     if (drift > 150000) {
       b.hidden = false;
       b.className = 'syncchip ahead';
-      b.textContent = '⏱ 拨回实时 ' + fmtSpan(back);
+      b.textContent = '⏱ 拨回 ' + fmtShort(back);
       b.title = '模拟时钟已经跑到真实时间前面 ' + fmtSpan(drift) + '，这一段的价格是模型生成的' +
         '\n点一下把时钟按回服务器最新报价 ' + liveClock(live.quoteTs) + '（快捷键 T）' +
         '\n路径 / K 线 / 净值曲线会一起重算，持仓和挂单不动';
