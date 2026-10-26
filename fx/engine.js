@@ -448,11 +448,17 @@
           if (t.length && t[t.length - 1][0] > lastTs) lastTs = t[t.length - 1][0];
         });
       });
-      if (lastTs * 1000 > this.clock + 60000) {
+      // 只在「最新 tick 还很新」时跳过去；中继断了几个小时就别把时钟拽回过去，
+      // 让模拟时钟停在真实时间上、从最后一个真实 tick 之后按模型走
+      var freshSec = lastTs ? (Date.now() / 1000 - lastTs) : Infinity;
+      if (lastTs * 1000 > this.clock + 60000 && freshSec < 1800) {
         this.clock = lastTs * 1000;
         this.lastEquityPush = 0;
         this._liveJumped = true;
         this.liveJumped = true;
+      } else if (lastTs && freshSec >= 1800) {
+        this.liveStaleSec = Math.round(freshSec);
+        this._liveJumped = true;      // 别再重复判断
       }
     }
     this._seedBars(2);                 // 用真实 tick 重建今天这一段分钟线
